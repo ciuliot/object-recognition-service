@@ -25,3 +25,4 @@ Navigating to `http://localhost:8080` should open Swagger UI for API testing.
 ## ToDo
 
 - [ ] Integrate with Cuda
+- [ ] Add TensorFlow implementation
