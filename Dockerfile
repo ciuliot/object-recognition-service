@@ -1,7 +1,5 @@
 FROM mcr.microsoft.com/dotnet/core/sdk:3.0.101-alpine3.9 AS build-env
 
-ARG OPENCV_VERSION="4.0.1"
-
 # Update image to latest packages
 RUN apk update && \
     apk upgrade
@@ -26,10 +24,6 @@ WORKDIR /home/darknet
 RUN sed -i '1 i\#include <sys/select.h>' examples/go.c
 RUN make -j3
 
-# Run sample
-RUN ./darknet detect cfg/yolov3.cfg ../yolov3.weights data/dog.jpg
-RUN ls -la
-
 # Build glue library
 WORKDIR /home/glue
 COPY /src/glue/*.c .
@@ -44,7 +38,7 @@ RUN dotnet restore
 COPY /src/webapi ./
 RUN dotnet publish -c Release -o out
 
-# build runtime image
+# Build runtime image
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.0
 
 WORKDIR /home
