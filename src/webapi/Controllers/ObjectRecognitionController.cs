@@ -12,7 +12,6 @@ namespace Digitalist.ObjectRecognition.Controllers
   public class ObjectRecognitionController : ControllerBase
   {
     readonly ILogger _logger;
-
     readonly DarknetService _darknetService;
 
     public ObjectRecognitionController(
@@ -36,7 +35,7 @@ namespace Digitalist.ObjectRecognition.Controllers
 
       var results = await Task.Factory.StartNew(() =>
       {
-        return _darknetService.Detect(filePath, thresh, hier_thresh);        
+        return _darknetService.Detect(filePath, thresh, hier_thresh);
       });
 
       return new JsonResult(results);

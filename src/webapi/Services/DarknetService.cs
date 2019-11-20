@@ -14,7 +14,6 @@ namespace Digitalist.ObjectRecognition.Services
     public DarknetService(ILogger<DarknetService> logger)
     {
       _logger = logger;
-
       _logger.LogInformation("Initializing darknet network");
 
       _network = NativeMethods.Darknet.initialize("cfg/yolov3.cfg", "yolov3.weights");
@@ -23,11 +22,11 @@ namespace Digitalist.ObjectRecognition.Services
     public DarknetResult[] Detect(string imagefile, float thresh, float hier_thresh)
     {
       var outputFile = Path.GetTempFileName();
-      
-      NativeMethods.Darknet.detect(_network, 
-        "cfg/coco.data", 
-        imagefile, 
-        thresh, 
+
+      NativeMethods.Darknet.detect(_network,
+        "cfg/coco.data",
+        imagefile,
+        thresh,
         hier_thresh,
         outputFile);
 

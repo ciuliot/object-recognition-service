@@ -20,7 +20,7 @@ namespace Digitalist.ObjectRecognition
       public static extern IntPtr initialize(
         [MarshalAs(UnmanagedType.LPStr)] string cfgfile,
         [MarshalAs(UnmanagedType.LPStr)] string weightfile);
-    }    
+    }
   }
 
 }

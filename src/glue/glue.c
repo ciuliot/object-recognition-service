@@ -11,12 +11,12 @@ network *initialize(char *cfgfile, char *weightfile)
   return net;
 }
 
-void detect(network *net, 
-  char *datacfg, 
-  char *filename, 
-  float thresh, 
-  float hier_thresh,
-  char *outfile)
+void detect(network *net,
+            char *datacfg,
+            char *filename,
+            float thresh,
+            float hier_thresh,
+            char *outfile)
 {
   list *options = read_data_cfg(datacfg);
   char *name_list = option_find_str(options, "names", "data/names.list");
@@ -41,7 +41,7 @@ void detect(network *net,
   if (nms)
     do_nms_sort(dets, nboxes, l.classes, nms);
 
-  FILE* output = fopen(outfile, "w");
+  FILE *output = fopen(outfile, "w");
   fprintf(output, "[\r\n");
 
   for (int i = 0; i < nboxes; ++i)
