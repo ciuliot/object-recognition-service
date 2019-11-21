@@ -19,8 +19,8 @@ namespace Digitalist.ObjectRecognition
       [DllImport("libdarknet_glue")]
       public static extern IntPtr initialize(
         [MarshalAs(UnmanagedType.LPStr)] string cfgfile,
-        [MarshalAs(UnmanagedType.LPStr)] string weightfile);
+        [MarshalAs(UnmanagedType.LPStr)] string weightfile,
+        int cuda_device);
     }
   }
-
 }

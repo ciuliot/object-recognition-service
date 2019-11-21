@@ -16,11 +16,12 @@ namespace Digitalist.ObjectRecognition.Services
       _logger = logger;
       _logger.LogInformation("Initializing darknet network");
 
-      _network = NativeMethods.Darknet.initialize("cfg/yolov3.cfg", "yolov3.weights");
+      _network = NativeMethods.Darknet.initialize("cfg/yolov3.cfg", "yolov3.weights", 0);
     }
 
     public DarknetResult[] Detect(string imagefile, float thresh, float hier_thresh)
     {
+     _logger.LogInformation($"Processing image {imagefile}");
       var outputFile = Path.GetTempFileName();
 
       NativeMethods.Darknet.detect(_network,
@@ -31,6 +32,7 @@ namespace Digitalist.ObjectRecognition.Services
         outputFile);
 
       var contents = File.ReadAllText(outputFile);
+      _logger.LogInformation(contents);
       return JsonConvert.DeserializeObject<DarknetResult[]>(contents);
     }
   }

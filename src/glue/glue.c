@@ -2,8 +2,11 @@
 
 // Adapted from https://github.com/pjreddie/darknet/blob/61c9d02ec461e30d55762ec7669d6a1d3c356fb2/examples/detector.c#L562
 
-network *initialize(char *cfgfile, char *weightfile)
+network *initialize(char *cfgfile, char *weightfile, int cuda_device)
 {
+#ifdef GPU
+  cuda_set_device(cuda_device);
+#endif
   image **alphabet = load_alphabet();
   network *net = load_network(cfgfile, weightfile, 0);
   set_batch_network(net, 1);
