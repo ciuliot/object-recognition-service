@@ -1,59 +1,73 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.0.101-alpine3.9 AS build-env
+# Build Darknet library and executable
 
-# Update image to latest packages
-RUN apk update && \
-    apk upgrade
+FROM nvidia/cuda:10.1-cudnn7-devel AS darknet-env
 
-# Install compilation dependencies 
-# TODO: install and compile OpenCV
-RUN apk add \
-    git \
-    build-base
+## Install build tools
 
-# Download YOLO weights
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y --no-install-recommends build-essential
+RUN apt-get install -y --no-install-recommends wget git
+
+## Download YOLO weights
+
 WORKDIR /home
 RUN wget https://pjreddie.com/media/files/yolov3.weights
 
-# Build darknet
+## Download darknet repository
+
 WORKDIR /home
 RUN git clone https://github.com/pjreddie/darknet
 
 WORKDIR /home/darknet
 
-# Fix compilation issues
+## Fix compilation issues
+
 RUN sed -i '1 i\#include <sys/select.h>' examples/go.c
+
+## Enable CUDA and CUDNN
+
+RUN sed -i'' 's/GPU=0/GPU=1/g' Makefile
+RUN sed -i'' 's/CUDNN=0/CUDNN=1/g' Makefile
+
+## Build Darknet library
+
 RUN make -j3
 
-# Build glue library
+## Build glue library
+
 WORKDIR /home/glue
 COPY /src/glue/*.c .
 RUN gcc -c -fPIC glue.c -o glue.o -I ../darknet/include
 RUN gcc -shared glue.o -o libdarknet_glue.so -ldarknet -L../darknet
 
-# Build ASP.NET Core wrapper and web API
-WORKDIR /home/webapi
-COPY /src/webapi/*.csproj .
-RUN dotnet restore
+# Build Web API
 
-COPY /src/webapi ./
-RUN dotnet publish -c Release -o out
+FROM mcr.microsoft.com/dotnet/core/sdk AS netcoresdk-env
+
+
+
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.0
 
+FROM nvidia/cuda:10.1-cudnn7-runtime
 WORKDIR /home
 
-COPY --from=build-env /home/webapi/out .
-COPY --from=build-env /home/darknet/libdarknet.a /usr/lib
-COPY --from=build-env /home/darknet/libdarknet.so /usr/lib
-COPY --from=build-env /home/glue/libdarknet_glue.so /usr/lib
-COPY --from=build-env /lib/libc.musl-x86_64.so.1 /lib
+## Copy darknet library and glue
 
-COPY --from=build-env /home/darknet/cfg/coco.data ./cfg/
-COPY --from=build-env /home/darknet/cfg/yolov3.cfg ./cfg/
-COPY --from=build-env /home/darknet/data/coco.names ./data/
-COPY --from=build-env /home/darknet/data/labels/*.png ./data/labels/
-COPY --from=build-env /home/darknet/data/dog.jpg ./
-COPY --from=build-env /home/yolov3.weights ./
+COPY --from=darknet-env /home/darknet/libdarknet.so /usr/lib
+COPY --from=darknet-env /home/glue/libdarknet_glue.so /usr/lib
 
-ENTRYPOINT ["dotnet", "/home/webapi.dll", "--environment=Development"]
+## Copy data
+
+COPY --from=darknet-env /home/darknet/cfg/coco.data ./cfg/
+COPY --from=darknet-env /home/darknet/cfg/yolov3.cfg ./cfg/
+COPY --from=darknet-env /home/darknet/data/coco.names ./data/
+COPY --from=darknet-env /home/darknet/data/labels/*.png ./data/labels/
+COPY --from=darknet-env /home/darknet/data/dog.jpg ./data/
+COPY --from=darknet-env /home/yolov3.weights ./
+
+## Copy executable
+
+COPY --from=darknet-env /home/darknet/darknet ./
+
+ENTRYPOINT ["./darknet", "detect", "cfg/yolov3.cfg", "yolov3.weights", "data/dog.jpg"]
