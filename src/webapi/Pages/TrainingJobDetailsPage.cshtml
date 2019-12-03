@@ -1,0 +1,90 @@
+@page "{jobId}"
+@model Digitalist.ObjectRecognition.Pages.TrainingJobDetailsPageModel
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aspnet-signalr/1.1.4/signalr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+</head>
+
+<body>
+  <input type='hidden' id='darknet-id' value="@(@Model.Job.Job.Args[0])" />
+
+  <div style="width:75%;">
+		<canvas id="chart"></canvas>
+	</div>
+
+  <script defer>
+    document.addEventListener('DOMContentLoaded', async () => {
+      var connection = new signalR.HubConnectionBuilder().withUrl("/darknetHub").build();
+
+      const config = {
+          type: 'line',
+          labels: [0],
+          data: {
+            datasets: [
+            { 
+              label: 'Loss',
+              fill: false,
+              borderColor: 'red',
+              yAxisID: 'Loss',
+              data: []
+            }, 
+            {
+              label: 'Avg. loss',
+              borderColor: 'green',
+              fill: false,
+              yAxisID: 'Loss',
+              data: []
+            }, 
+            {
+              label: 'Learning rate',
+              borderColor: 'blue',
+              fill: false,
+              yAxisID: 'Learning rate',
+              data: []
+            }],
+
+          },
+          options: {
+            scales: {
+              yAxes: [{
+                id: 'Loss',
+                type: 'linear',
+                position: 'left',
+              }, {
+                id: 'Learning rate',
+                type: 'linear',
+                position: 'right',                
+              }]
+            }
+          }
+      }
+
+      var chart = new Chart('chart', config);
+
+      connection.on('updateReceived', (batchId, loss, avgLoss, learningRate, trainingStep) => {
+        console.log('Update received', loss, avgLoss, learningRate);
+
+        config.data.labels.push(batchId);
+
+        config.data.datasets[0].data.push(loss);
+        config.data.datasets[1].data.push(avgLoss);
+        config.data.datasets[2].data.push(learningRate);
+
+        chart.update();
+
+      });
+
+      await connection.start();
+      console.log("connected");      
+
+      // Request initial data
+
+      const darknetId = document.getElementById('darknet-id').value;
+
+      await connection.send('Subscribe', darknetId);
+    });
+  </script>
+</body>
+</html>

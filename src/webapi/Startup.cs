@@ -5,6 +5,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Amazon.S3;
+using Amazon;
+using Hangfire;
+using Hangfire.MemoryStorage;
+using System;
+using Hangfire.Dashboard;
+using Digitalist.ObjectRecognition.Hubs;
+using Digitalist.ObjectRecognition.Jobs;
 
 namespace Digitalist.ObjectRecognition
 {
@@ -20,24 +28,39 @@ namespace Digitalist.ObjectRecognition
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
     {
+      services.AddHangfire(config =>
+      {
+        config.UseMemoryStorage();
+      });
       services.AddMvc().AddRazorPagesOptions(options =>
       {
-        options.RootDirectory = "/src/cs/Pages";
+        //options.RootDirectory = "/src/webapi/Pages";
       });
+      services.AddSignalR();
       services.AddLogging();
       services.AddControllers();
 
       services.AddSingleton<DarknetService>();
 
+      var config = new AmazonS3Config
+      {
+        RegionEndpoint = Configuration.GetValue<RegionEndpoint>("AWS_REGION"),
+        ServiceURL = Configuration["AWS_SERVICE_URL"],
+        ForcePathStyle = true
+      };
+      services.AddSingleton(new AmazonS3Client(
+        Configuration["AWS_ACCESS_KEY"],
+        Configuration["AWS_SECRET_KEY"],
+        config));
+
       services.AddSwaggerGen(c =>
       {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
-        //c.OperationFilter<FormFileSwaggerFilter>();
       });
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IBackgroundJobClient backgroundJobs)
     {
       if (env.IsDevelopment())
       {
@@ -50,6 +73,19 @@ namespace Digitalist.ObjectRecognition
         app.UseHsts();
       }
 
+      app.UseRouting();
+
+      app.UseEndpoints(endpoints =>
+      {
+        endpoints.MapRazorPages();
+        endpoints.MapControllers();
+
+        endpoints.MapHub<DarknetJobHub>("/darknetHub");
+      });
+
+      app.UseHangfireDashboard();
+      app.UseHangfireServer();
+
       app.UseSwagger();
 
       app.UseSwaggerUI(c =>
@@ -59,14 +95,21 @@ namespace Digitalist.ObjectRecognition
       });
 
       app.UseHttpsRedirection();
-      app.UseStaticFiles();
-      app.UseRouting();
+      app.UseStaticFiles();      
 
-      app.UseEndpoints(endpoints =>
+      JobsSidebarMenu.Items.Add(page => new MenuItem("Training details", page.Url.To("/../TrainingJobsPage"))
       {
-        endpoints.MapRazorPages();
-        endpoints.MapControllers();
+        Active = page.RequestPath.StartsWith("/jobs/training"),
+        Metric = DashboardMetrics.ProcessingCount
       });
+
+      backgroundJobs.Enqueue<DarknetTrainJob>(job =>
+        job.Start(Guid.NewGuid().ToString(),
+        "/darknet_host/coco/coco/trainvalno5k.txt",
+        "/darknet_host/cfg/yolov3.cfg",
+        "/darknet_host/darknet53.conv.74",
+        new int[] { 0 },
+        false));
     }
   }
 }

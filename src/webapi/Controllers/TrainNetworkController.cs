@@ -7,14 +7,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Digitalist.ObjectRecognition.Controllers
 {
-  [Route("api/recognize"), ApiController]
+  [Route("api/train"), ApiController]
   [Produces("application/json")]
-  public class ObjectRecognitionController : ControllerBase
+  public class TrainNetworkController : ControllerBase
   {
     readonly ILogger _logger;
     readonly DarknetService _darknetService;
 
-    public ObjectRecognitionController(
+    public TrainNetworkController(
       ILogger<ObjectRecognitionController> logger,
       DarknetService darknetService)
     {
