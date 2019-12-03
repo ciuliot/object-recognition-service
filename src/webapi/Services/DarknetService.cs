@@ -13,38 +13,44 @@ namespace Digitalist.ObjectRecognition.Services
   public class DarknetService
   {
     readonly ILogger _logger;
-    readonly IntPtr _network;
-    readonly AmazonS3Client _amazonS3Client;
+    IntPtr _detectionNetwork;
     readonly IBackgroundJobClient _backgroundJobs;
 
-    public DarknetService(ILogger<DarknetService> logger,
-      IBackgroundJobClient backgroundJobs,
-      AmazonS3Client amazonS3Client)
-    {
-      _logger = logger;
-      _amazonS3Client = amazonS3Client;
-      _backgroundJobs = backgroundJobs;
-      _logger.LogInformation("Initializing darknet network");
+    #region DetectionNetwork
 
-      _network = NativeMethods.Darknet.initialize("cfg/yolov3.cfg", "yolov3.weights", 0);
+    IntPtr DetectionNetwork
+    {
+      get
+      {
+        lock(this)
+        {
+          if (_detectionNetwork == IntPtr.Zero)
+          {
+            _logger.LogInformation("Initializing darknet network");
+
+            _detectionNetwork = NativeMethods.Darknet.initialize("cfg/yolov3.cfg", "yolov3.weights", 0);
+          }
+        }
+
+        return _detectionNetwork;
+      }
     }
 
-    public async Task<DarknetResult[]> Detect(string imagefile, float thresh, float hier_thresh)
-    {
-      try
-      {
-        var buckets = await _amazonS3Client.ListBucketsAsync();
-        _logger.LogInformation($"Bucket count {buckets.Buckets.Count}");
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Failed");
-      }
+    #endregion
 
+    public DarknetService(ILogger<DarknetService> logger,
+      IBackgroundJobClient backgroundJobs)
+    {
+      _logger = logger;
+      _backgroundJobs = backgroundJobs;
+    }
+
+    public DarknetResult[] Detect(string imagefile, float thresh, float hier_thresh)
+    {
       _logger.LogInformation($"Processing image {imagefile}");
       var outputFile = Path.GetTempFileName();
 
-      NativeMethods.Darknet.detect(_network,
+      NativeMethods.Darknet.detect(DetectionNetwork,
         "cfg/coco.data",
         imagefile,
         thresh,

@@ -1,7 +1,4 @@
-using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Digitalist.ObjectRecognition.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -26,7 +23,7 @@ namespace Digitalist.ObjectRecognition.Jobs
         float avg_loss, float learning_rate, int images)
     {
       _logger.LogInformation($"Batch finished for {_hubId} Epoch: {batch_number}" +
-        $" Loss {loss} Avg.loss {avg_loss} Learning rate {learning_rate}"+
+        $" Loss {loss} Avg.loss {avg_loss} Learning rate {learning_rate}" +
         $" iteration {images}");
 
       _darknetJobHub.Clients.Group(_hubId).UpdateReceived(

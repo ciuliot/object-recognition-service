@@ -1,6 +1,9 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
+using Digitalist.ObjectRecognition.Jobs;
 using Digitalist.ObjectRecognition.Services;
+using Hangfire;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -13,22 +16,67 @@ namespace Digitalist.ObjectRecognition.Controllers
   {
     readonly ILogger _logger;
     readonly DarknetService _darknetService;
+    readonly IBackgroundJobClient _backgroundJobs;
 
     public TrainNetworkController(
       ILogger<ObjectRecognitionController> logger,
+      IBackgroundJobClient backgroundJobs,
       DarknetService darknetService)
     {
       _logger = logger;
+      _backgroundJobs = backgroundJobs;
       _darknetService = darknetService;
     }
 
     [HttpPost("darknet")]
-    public async Task<ActionResult<string>> Darknet(
+    public ActionResult<string> Darknet(
       string trainimages, string cfgfile, string weightfile, int[] gpus, bool clear)
     {
       var jobId = _darknetService.Train(trainimages, cfgfile, weightfile, gpus, clear);
 
-      return new JsonResult(new {
+      return new JsonResult(new
+      {
+        jobId
+      });
+    }
+
+    [HttpPost("darknetS3")]
+    public ActionResult<string> DarknetS3(string bucketName, string weightsFile, int[] gpus, bool clear)
+    {
+      var hubId = Guid.NewGuid();
+      var outputDirectory = Path.Combine(Path.GetTempPath(), hubId.ToString());
+
+      var weightsFileJob = _backgroundJobs.Enqueue<AmazonS3DownloadJob>(job =>
+        job.File(bucketName, weightsFile, outputDirectory)
+      );
+
+      var configFileJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(weightsFileJob, job =>
+        job.File(bucketName, "config.cfg", outputDirectory)
+      );
+
+      var trainingImagesPath = "images/train";
+      var trainingImagesJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(configFileJob, job =>
+        job.Directory(bucketName, trainingImagesPath, Path.Join(outputDirectory, trainingImagesPath))
+      );
+
+      var trainingLabelsPath = "labels/train";
+      var trainingLabelsJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(trainingImagesJob, job =>
+        job.Directory(bucketName, trainingLabelsPath, Path.Join(outputDirectory, trainingLabelsPath))
+      );
+
+      var trainimages = Path.Combine(outputDirectory, "train.txt");
+
+      var imageListJobId = _backgroundJobs.ContinueJobWith<GenerateImageListJob>(trainingLabelsJob, job =>
+        job.Start(Path.Join(outputDirectory, "images", "train"), trainimages)
+      );
+
+      var jobId = _backgroundJobs.ContinueJobWith<DarknetTrainJob>(imageListJobId, job =>
+      job.Start(Guid.NewGuid().ToString(),
+        trainimages, Path.Combine(outputDirectory, "config.cfg"),
+        Path.Combine(outputDirectory, weightsFile), gpus, clear));
+
+      return new JsonResult(new
+      {
         jobId
       });
     }

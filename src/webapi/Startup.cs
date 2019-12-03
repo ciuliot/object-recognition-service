@@ -41,10 +41,13 @@ namespace Digitalist.ObjectRecognition
 
       var config = new AmazonS3Config
       {
-        RegionEndpoint = Configuration.GetValue<RegionEndpoint>("AWS_REGION"),
+        RegionEndpoint = RegionEndpoint.GetBySystemName(Configuration["AWS_REGION"]),
         ServiceURL = Configuration["AWS_SERVICE_URL"],
         ForcePathStyle = true
       };
+
+      System.Console.WriteLine(config.RegionEndpoint);
+
       services.AddSingleton(new AmazonS3Client(
         Configuration["AWS_ACCESS_KEY"],
         Configuration["AWS_SECRET_KEY"],
