@@ -11,29 +11,39 @@
   <input type='hidden' id='darknet-id' value="@(@Model.Job.Job.Args[0])" />
 
   <div style="width:75%;">
+  <button onClick="showAll()">Show whole dataset</button>
+  <button onClick="showLast()">Show last 100 values</button>
 		<canvas id="chart"></canvas>
 	</div>
 
   <script defer>
+  let mode = 0;
+
+  function showAll() {
+    mode = 0;
+  }
+
+  function showLast() {
+    mode = 100;
+  }
+
     document.addEventListener('DOMContentLoaded', async () => {
       var connection = new signalR.HubConnectionBuilder().withUrl("/darknetHub").build();
 
-      const config = {
-          type: 'line',
-          labels: [0],
-          data: {
-            datasets: [
+      const dataTemplate = {
+        datasets: [
             { 
               label: 'Loss',
               fill: false,
-              borderColor: 'red',
+              borderColor: 'rgb(255, 99, 132)',
               yAxisID: 'Loss',
               data: []
             }, 
             {
               label: 'Avg. loss',
-              borderColor: 'green',
-              fill: false,
+              borderColor: 'rgb(75, 192, 192)',
+              backgroundColor: 'rgba(75, 192, 192, 0.5)',
+              fill: true,
               yAxisID: 'Loss',
               data: []
             }, 
@@ -44,8 +54,16 @@
               yAxisID: 'Learning rate',
               data: []
             }],
+            labels: []
+      }
+      
+      const data = {
+        datasets: [[], [], []],
+        labels: []
+      };
 
-          },
+      const config = {
+          type: 'line',
           options: {
             scales: {
               yAxes: [{
@@ -66,20 +84,35 @@
       connection.on('updateReceived', (batchId, loss, avgLoss, learningRate, trainingStep) => {
         console.log('Update received', loss, avgLoss, learningRate);
 
-        config.data.labels.push(batchId);
+        data.labels.push(batchId);
 
-        config.data.datasets[0].data.push(loss);
-        config.data.datasets[1].data.push(avgLoss);
-        config.data.datasets[2].data.push(learningRate);
+        data.datasets[0].push(loss);
+        data.datasets[1].push(avgLoss);
+        data.datasets[2].push(learningRate);
+
+        config.data = {
+            ...dataTemplate
+          };
+
+        if (mode > 0 && data.labels.length > mode) {
+          config.data.labels = data.labels.slice(-mode);
+          for(let i = 0; i < data.datasets.length; i++) {
+            config.data.datasets[i].data = data.datasets[i].slice(-mode);
+          }
+        } else {          
+          config.data.labels = data.labels;
+          for(let i = 0; i < data.datasets.length; i++) {
+            config.data.datasets[i].data = data.datasets[i];
+          }
+        }
 
         chart.update();
-
       });
 
       await connection.start();
       console.log("connected");      
 
-      // Request initial data
+      // ToDo: Request initial data
 
       const darknetId = document.getElementById('darknet-id').value;
 

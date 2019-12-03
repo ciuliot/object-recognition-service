@@ -182,7 +182,7 @@ void train_detector(char *train_images,
         avg_loss = avg_loss*.9 + loss*.1;
 
         i = get_current_batch(net);
-        fprintf(stderr, "%ld: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, i*imgs);
+        //fprintf(stderr, "%ld: %f, %f avg, %f rate, %lf seconds, %d images\n", get_current_batch(net), loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, i*imgs);
 
         (*batch_finished_callback)(get_current_batch(net), loss, avg_loss, get_current_rate(net), i*imgs);
         if(i%100==0){

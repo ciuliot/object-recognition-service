@@ -32,10 +32,7 @@ namespace Digitalist.ObjectRecognition
       {
         config.UseMemoryStorage();
       });
-      services.AddMvc().AddRazorPagesOptions(options =>
-      {
-        //options.RootDirectory = "/src/webapi/Pages";
-      });
+      services.AddMvc();
       services.AddSignalR();
       services.AddLogging();
       services.AddControllers();
@@ -52,7 +49,7 @@ namespace Digitalist.ObjectRecognition
         Configuration["AWS_ACCESS_KEY"],
         Configuration["AWS_SECRET_KEY"],
         config));
-
+ 
       services.AddSwaggerGen(c =>
       {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
@@ -81,10 +78,7 @@ namespace Digitalist.ObjectRecognition
         endpoints.MapControllers();
 
         endpoints.MapHub<DarknetJobHub>("/darknetHub");
-      });
-
-      app.UseHangfireDashboard();
-      app.UseHangfireServer();
+      });      
 
       app.UseSwagger();
 
@@ -95,7 +89,7 @@ namespace Digitalist.ObjectRecognition
       });
 
       app.UseHttpsRedirection();
-      app.UseStaticFiles();      
+      
 
       JobsSidebarMenu.Items.Add(page => new MenuItem("Training details", page.Url.To("/../TrainingJobsPage"))
       {
@@ -103,13 +97,13 @@ namespace Digitalist.ObjectRecognition
         Metric = DashboardMetrics.ProcessingCount
       });
 
-      backgroundJobs.Enqueue<DarknetTrainJob>(job =>
-        job.Start(Guid.NewGuid().ToString(),
-        "/darknet_host/coco/coco/trainvalno5k.txt",
-        "/darknet_host/cfg/yolov3.cfg",
-        "/darknet_host/darknet53.conv.74",
-        new int[] { 0 },
-        false));
+      app.UseHangfireDashboard("/dashboard", new DashboardOptions
+      {
+        Authorization = new [] { new NoAuthorizationFilter() }
+      });
+      app.UseHangfireServer();      
+
+      app.UseStaticFiles();      
     }
   }
 }

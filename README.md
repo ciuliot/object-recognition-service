@@ -37,6 +37,20 @@ docker run -p 8080:80 --runtime=nvidia object-recognition-service:cuda
 ```
 
 Navigating to `http://localhost:8080` should open Swagger UI for API testing.
+Navigating to `http://localhost:8080/dashboard` should open Hangfire UI for job monitoring.
+
+## Enqueue training job
+
+```
+backgroundJobs.Enqueue<DarknetTrainJob>(job =>
+        job.Start(Guid.NewGuid().ToString(),
+        "/darknet_host/data/coco/trainvalno5k.txt",
+        "/darknet_host/cfg/yolov3.cfg",
+        "/darknet_host/darknet53.conv.74",
+        new int[] { 0 },
+        false));
+```
+
 
 ## ToDo
 

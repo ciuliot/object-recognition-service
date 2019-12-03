@@ -24,21 +24,13 @@ namespace Digitalist.ObjectRecognition.Controllers
 
     [HttpPost("darknet")]
     public async Task<ActionResult<string>> Darknet(
-      IFormFile image, float thresh = 0.5f, float hier_thresh = 0.5f)
+      string trainimages, string cfgfile, string weightfile, int[] gpus, bool clear)
     {
-      var filePath = Path.GetTempFileName();
+      var jobId = _darknetService.Train(trainimages, cfgfile, weightfile, gpus, clear);
 
-      using (var stream = System.IO.File.Create(filePath))
-      {
-        await image.CopyToAsync(stream);
-      }
-
-      var results = await Task.Factory.StartNew(() =>
-      {
-        return _darknetService.Detect(filePath, thresh, hier_thresh);
+      return new JsonResult(new {
+        jobId
       });
-
-      return new JsonResult(results);
     }
   }
 }

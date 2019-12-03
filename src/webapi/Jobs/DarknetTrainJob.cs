@@ -25,9 +25,9 @@ namespace Digitalist.ObjectRecognition.Jobs
     async void BatchFinishedCallback(ulong batch_number, float loss,
         float avg_loss, float learning_rate, int images)
     {
-      _logger.LogInformation($"Batch finished for ${_hubId} Epoch: ${batch_number}" +
-        $" Loss ${loss} Avg.loss ${avg_loss} Learning rate ${learning_rate}"+
-        $" iteration ${images}");
+      _logger.LogInformation($"Batch finished for {_hubId} Epoch: {batch_number}" +
+        $" Loss {loss} Avg.loss {avg_loss} Learning rate {learning_rate}"+
+        $" iteration {images}");
 
       _darknetJobHub.Clients.Group(_hubId).UpdateReceived(
                 batch_number,
@@ -43,7 +43,7 @@ namespace Digitalist.ObjectRecognition.Jobs
       var outputdir = Path.Combine(Path.GetTempPath(), hubId.ToString());
       Directory.CreateDirectory(outputdir);
 
-      _logger.LogInformation($"Starting training job for {trainimages} [${cfgfile}");
+      _logger.LogInformation($"Starting training job for {trainimages} [{cfgfile}");
 
       NativeMethods.Darknet.train_detector(trainimages, cfgfile, weightfile, outputdir,
         gpus, gpus.Length, clear ? 1 : 0, BatchFinishedCallback);
