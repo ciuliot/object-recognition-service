@@ -56,12 +56,12 @@ namespace Digitalist.ObjectRecognition.Controllers
 
       var trainingImagesPath = "images/train";
       var trainingImagesJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(configFileJob, job =>
-        job.Directory(bucketName, trainingImagesPath, Path.Join(outputDirectory, trainingImagesPath))
+        job.Directory(bucketName, trainingImagesPath, outputDirectory)
       );
 
       var trainingLabelsPath = "labels/train";
       var trainingLabelsJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(trainingImagesJob, job =>
-        job.Directory(bucketName, trainingLabelsPath, Path.Join(outputDirectory, trainingLabelsPath))
+        job.Directory(bucketName, trainingLabelsPath, outputDirectory)
       );
 
       var trainimages = Path.Combine(outputDirectory, "train.txt");
