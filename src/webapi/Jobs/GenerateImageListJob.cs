@@ -2,6 +2,7 @@ using System.IO;
 using Hangfire.Server;
 using Hangfire.Console;
 using Microsoft.Extensions.Logging;
+using Hangfire;
 
 namespace Digitalist.ObjectRecognition.Jobs
 {
@@ -15,7 +16,7 @@ namespace Digitalist.ObjectRecognition.Jobs
     }
 
     public void Start(string imagesFolder, string labelsFolder, string outputFile, 
-      PerformContext context)
+      PerformContext context, IJobCancellationToken token)
     {
       var progressBar = context.WriteProgressBar();
 
@@ -25,6 +26,7 @@ namespace Digitalist.ObjectRecognition.Jobs
         foreach (var fileName in Directory.GetFiles(imagesFolder).WithProgress(progressBar))
         {
           var labelFile = Path.GetFileName(Path.ChangeExtension(fileName, "txt"));
+          token.ThrowIfCancellationRequested();
 
           if (File.Exists(Path.Combine(labelsFolder, labelFile)))
           {

@@ -12,7 +12,6 @@ using Hangfire.MemoryStorage;
 using System;
 using Hangfire.Dashboard;
 using Digitalist.ObjectRecognition.Hubs;
-using Digitalist.ObjectRecognition.Jobs;
 using Hangfire.Console;
 using Digitalist.ObjectRecognition.Console;
 using System.Threading;
@@ -130,7 +129,7 @@ namespace Digitalist.ObjectRecognition
       });
       app.UseHangfireServer();
 
-      backgroundJobs.Enqueue<LongRunning>(t => t.Run(null, null));
+      //backgroundJobs.Enqueue<LongRunning>(t => t.Run(null, null));
 
       app.UseStaticFiles();
     }

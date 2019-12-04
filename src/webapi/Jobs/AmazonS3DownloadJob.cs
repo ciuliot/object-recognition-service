@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Hangfire.Server;
 using Hangfire.Console;
 using System.Collections.Generic;
+using Hangfire;
 
 namespace Digitalist.ObjectRecognition.Jobs
 {
@@ -23,7 +24,7 @@ namespace Digitalist.ObjectRecognition.Jobs
     }
 
     public void Directory(string bucketName, string s3Directory, string outputDirectory,
-      PerformContext context)
+      PerformContext context, IJobCancellationToken token)
     {
       var i = 0.0;
       var startAfter = default(string);
@@ -38,7 +39,7 @@ namespace Digitalist.ObjectRecognition.Jobs
           BucketName = bucketName,
           Prefix = s3Directory,
           StartAfter = startAfter
-        }).GetAwaiter().GetResult();
+        }, token.ShutdownToken).GetAwaiter().GetResult();
 
         if (response.KeyCount > 0)
         {
@@ -50,6 +51,7 @@ namespace Digitalist.ObjectRecognition.Jobs
       var tasks = from key in keys
                   select DownloadFile(bucketName, key, outputDirectory).ContinueWith((t) =>
                   {
+                    token.ThrowIfCancellationRequested();
                     progressBar.SetValue((100.0 * ++i) / (double)keys.Count);
                   });
 

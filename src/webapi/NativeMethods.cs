@@ -32,6 +32,7 @@ namespace Digitalist.ObjectRecognition
         [MarshalAs(UnmanagedType.LPStr)] string weightfile, 
         [MarshalAs(UnmanagedType.LPStr)] string outputdir, 
         [In, Out] int[] gpus, int ngpus, int clear,
+        ref int abort,
         batch_finished_callback batch_finished_callback);
     }
   }

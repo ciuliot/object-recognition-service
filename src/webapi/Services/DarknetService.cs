@@ -67,7 +67,7 @@ namespace Digitalist.ObjectRecognition.Services
       _logger.LogInformation($"Enqueueing new training job");
 
       return _backgroundJobs.Enqueue<DarknetTrainJob>(job =>
-      job.Start(trainimages, cfgfile, weightfile, gpus, clear, null));
+      job.Start(trainimages, cfgfile, weightfile, gpus, clear, null, null));
     }
   }
 }
