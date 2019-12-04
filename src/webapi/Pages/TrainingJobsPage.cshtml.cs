@@ -1,13 +1,16 @@
+using Digitalist.ObjectRecognition.Jobs;
 using Hangfire;
 using Hangfire.Storage.Monitoring;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Digitalist.ObjectRecognition.Pages
 {
   public class TrainingJobsPageModel : PageModel
   {
-    public JobList<ProcessingJobDto> Jobs;
+    public KeyValuePair<string, ProcessingJobDto>[] Jobs;
     readonly ILogger _logger;
 
     public TrainingJobsPageModel(ILogger<TrainingJobsPageModel> logger)
@@ -18,7 +21,9 @@ namespace Digitalist.ObjectRecognition.Pages
     public void OnGet()
     {
       var monitor = JobStorage.Current.GetMonitoringApi();
-      Jobs = monitor.ProcessingJobs(0, 10);
+      Jobs = (from j in  monitor.ProcessingJobs(0, 9999)
+             where j.Value.Job.Type == typeof(DarknetTrainJob)
+             select j).ToArray();
     }
   }
 }
