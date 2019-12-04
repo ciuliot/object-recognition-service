@@ -2,6 +2,8 @@ using System.IO;
 using Digitalist.ObjectRecognition.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Hangfire.Server;
+using Hangfire.Console;
 
 namespace Digitalist.ObjectRecognition.Jobs
 {
@@ -9,7 +11,7 @@ namespace Digitalist.ObjectRecognition.Jobs
   {
     readonly ILogger _logger;
     readonly IHubContext<DarknetJobHub, IDarknetJobHubClient> _darknetJobHub;
-    string _hubId;
+    PerformContext _context;
 
     public DarknetTrainJob(
       ILogger<DarknetTrainJob> logger,
@@ -22,11 +24,11 @@ namespace Digitalist.ObjectRecognition.Jobs
     async void BatchFinishedCallback(ulong batch_number, float loss,
         float avg_loss, float learning_rate, int images)
     {
-      _logger.LogInformation($"Batch finished for {_hubId} Epoch: {batch_number}" +
+      _context.WriteLine($"Epoch: {batch_number}" +
         $" Loss {loss} Avg.loss {avg_loss} Learning rate {learning_rate}" +
         $" iteration {images}");
 
-      _darknetJobHub.Clients.Group(_hubId).UpdateReceived(
+      _darknetJobHub.Clients.Group(_context.BackgroundJob.Id).UpdateReceived(
                 batch_number,
                 loss,
                 avg_loss,
@@ -34,13 +36,13 @@ namespace Digitalist.ObjectRecognition.Jobs
                 images);
     }
 
-    public void Start(string hubId, string trainimages, string cfgfile, string weightfile, int[] gpus, bool clear)
+    public void Start(string trainimages, string cfgfile, 
+      string weightfile, int[] gpus, bool clear, PerformContext context)
     {
-      _hubId = hubId;
-      var outputdir = Path.Combine(Path.GetTempPath(), hubId.ToString());
+      _context = context;
+      context.WriteLine($"<a href='/TrainingJobDetailsPage/{context.BackgroundJob.Id}'>Progress tracking</a>");
+      var outputdir = Path.Combine(Path.GetTempPath(), context.BackgroundJob.Id);
       Directory.CreateDirectory(outputdir);
-
-      _logger.LogInformation($"Starting training job for {trainimages} [{cfgfile}");
 
       NativeMethods.Darknet.train_detector(trainimages, cfgfile, weightfile, outputdir,
         gpus, gpus.Length, clear ? 1 : 0, BatchFinishedCallback);

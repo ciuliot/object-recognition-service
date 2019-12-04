@@ -3,11 +3,10 @@ using System.IO;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.S3.Transfer;
 using Microsoft.Extensions.Logging;
 using Hangfire.Server;
 using Hangfire.Console;
-using Hangfire.Console.Progress;
+using System.Collections.Generic;
 
 namespace Digitalist.ObjectRecognition.Jobs
 {
@@ -23,36 +22,46 @@ namespace Digitalist.ObjectRecognition.Jobs
       _amazonS3Client = amazonS3Client;
     }
 
-    public void Directory(string bucketName, string s3Directory, string outputDirectory, PerformContext context)
+    public void Directory(string bucketName, string s3Directory, string outputDirectory,
+      PerformContext context)
     {
-      context.WriteLine($"Downloading directory {bucketName}/{s3Directory} to {outputDirectory}");
-
-      var objects = _amazonS3Client.ListObjectsV2Async(new ListObjectsV2Request
-      {
-        BucketName = bucketName,
-        Prefix = s3Directory
-      }).GetAwaiter().GetResult();
       var i = 0.0;
-
+      var startAfter = default(string);
+      var response = default(ListObjectsV2Response);
       var progressBar = context.WriteProgressBar();
+      var keys = new List<string>();
 
-      var tasks = from obj in objects.S3Objects
-                  select DownloadFile(bucketName, obj.Key, outputDirectory).ContinueWith((t) =>
+      do
+      {
+        response = _amazonS3Client.ListObjectsV2Async(new ListObjectsV2Request
+        {
+          BucketName = bucketName,
+          Prefix = s3Directory,
+          StartAfter = startAfter
+        }).GetAwaiter().GetResult();
+
+        if (response.KeyCount > 0)
+        {
+          keys.AddRange(response.S3Objects.Select(o => o.Key));
+          startAfter = keys.Last();
+        }
+      } while (response.KeyCount > 0);
+
+      var tasks = from key in keys
+                  select DownloadFile(bucketName, key, outputDirectory).ContinueWith((t) =>
                   {
-                    progressBar.SetValue((100.0 * ++i) / (double)objects.KeyCount);
+                    progressBar.SetValue((100.0 * ++i) / (double)keys.Count);
                   });
 
       Task.WaitAll(tasks.ToArray());
 
-      progressBar.SetValue(100);
 
-      _logger.LogInformation($"Directory downloaded {bucketName}/{s3Directory} to {outputDirectory}");
+      progressBar.SetValue(100);
+      context.WriteLine($"Downloaded {(int)keys.Count} files");
     }
 
-    public void File(string bucketName, string fileName, string outputDirectory, PerformContext context)
+    public void File(string bucketName, string fileName, string outputDirectory)
     {
-      context.WriteLine($"Downloading file {bucketName}/{fileName} to {outputDirectory}/{fileName}");
-      _logger.LogInformation($"Downloading file {bucketName}/{fileName} to {outputDirectory}/{fileName}");
       DownloadFile(bucketName, fileName, outputDirectory).GetAwaiter().GetResult();
     }
 

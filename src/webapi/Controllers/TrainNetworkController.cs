@@ -47,11 +47,11 @@ namespace Digitalist.ObjectRecognition.Controllers
       var outputDirectory = Path.Combine(Path.GetTempPath(), hubId.ToString());
 
       var weightsFileJob = _backgroundJobs.Enqueue<AmazonS3DownloadJob>(job =>
-        job.File(bucketName, weightsFile, outputDirectory, null)
+        job.File(bucketName, weightsFile, outputDirectory)
       );
 
       var configFileJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(weightsFileJob, job =>
-        job.File(bucketName, "config.cfg", outputDirectory, null)
+        job.File(bucketName, "config.cfg", outputDirectory)
       );
 
       var trainingImagesPath = "images/train";
@@ -67,13 +67,14 @@ namespace Digitalist.ObjectRecognition.Controllers
       var trainimages = Path.Combine(outputDirectory, "train.txt");
 
       var imageListJobId = _backgroundJobs.ContinueJobWith<GenerateImageListJob>(trainingLabelsJob, job =>
-        job.Start(Path.Join(outputDirectory, "images", "train"), trainimages)
+        job.Start(Path.Join(outputDirectory, "images", "train"), 
+        Path.Join(outputDirectory, "labels", "train"),
+        trainimages, null)
       );
 
       var jobId = _backgroundJobs.ContinueJobWith<DarknetTrainJob>(imageListJobId, job =>
-      job.Start(Guid.NewGuid().ToString(),
-        trainimages, Path.Combine(outputDirectory, "config.cfg"),
-        Path.Combine(outputDirectory, weightsFile), gpus, clear));
+      job.Start(trainimages, Path.Combine(outputDirectory, "config.cfg"),
+        Path.Combine(outputDirectory, weightsFile), gpus, clear, null));
 
       return new JsonResult(new
       {

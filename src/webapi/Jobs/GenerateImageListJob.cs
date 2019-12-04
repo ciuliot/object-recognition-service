@@ -1,8 +1,6 @@
-using System;
 using System.IO;
-using System.Threading.Tasks;
-using Amazon.S3;
-using Amazon.S3.Transfer;
+using Hangfire.Server;
+using Hangfire.Console;
 using Microsoft.Extensions.Logging;
 
 namespace Digitalist.ObjectRecognition.Jobs
@@ -16,18 +14,29 @@ namespace Digitalist.ObjectRecognition.Jobs
       _logger = logger;
     }
 
-    public void Start(string imagesFolder, string outputFile)
+    public void Start(string imagesFolder, string labelsFolder, string outputFile, 
+      PerformContext context)
     {
-      _logger.LogInformation($"Generating image list for folder ${imagesFolder} to file ${outputFile}");
-      
+      var progressBar = context.WriteProgressBar();
+
       using (var file = File.OpenWrite(outputFile))
       using (var sr = new StreamWriter(file))
       {
-        foreach(var fileName in Directory.GetFiles(imagesFolder))
+        foreach (var fileName in Directory.GetFiles(imagesFolder).WithProgress(progressBar))
         {
-          sr.Write(fileName);
-          sr.WriteLine();
-        }        
+          var labelFile = Path.GetFileName(Path.ChangeExtension(fileName, "txt"));
+
+          if (File.Exists(Path.Combine(labelsFolder, labelFile)))
+          {
+            sr.Write(fileName);
+            sr.WriteLine();
+          }
+          else
+          {
+            context.WriteLine(ConsoleTextColor.DarkYellow, 
+              $"Image {Path.GetFileName(fileName)} does not have corresponding label, skipping");
+          }
+        }
       }
     }
   }

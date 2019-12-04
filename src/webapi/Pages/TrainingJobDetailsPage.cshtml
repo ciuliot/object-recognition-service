@@ -8,8 +8,6 @@
 </head>
 
 <body>
-  <input type='hidden' id='darknet-id' value="@(@Model.Job.Job.Args[0])" />
-
   <div style="width:75%;">
   <button onClick="showAll()">Show whole dataset</button>
   <button onClick="showLast()">Show last 100 values</button>
@@ -114,9 +112,7 @@
 
       // ToDo: Request initial data
 
-      const darknetId = document.getElementById('darknet-id').value;
-
-      await connection.send('Subscribe', darknetId);
+      await connection.send('Subscribe', jobId);
     });
   </script>
 </body>
