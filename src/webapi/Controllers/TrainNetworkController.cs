@@ -47,21 +47,21 @@ namespace Digitalist.ObjectRecognition.Controllers
       var outputDirectory = Path.Combine(Path.GetTempPath(), hubId.ToString());
 
       var weightsFileJob = _backgroundJobs.Enqueue<AmazonS3DownloadJob>(job =>
-        job.File(bucketName, weightsFile, outputDirectory)
+        job.File(bucketName, weightsFile, outputDirectory, null)
       );
 
       var configFileJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(weightsFileJob, job =>
-        job.File(bucketName, "config.cfg", outputDirectory)
+        job.File(bucketName, "config.cfg", outputDirectory, null)
       );
 
       var trainingImagesPath = "images/train";
       var trainingImagesJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(configFileJob, job =>
-        job.Directory(bucketName, trainingImagesPath, outputDirectory)
+        job.Directory(bucketName, trainingImagesPath, outputDirectory, null)
       );
 
       var trainingLabelsPath = "labels/train";
       var trainingLabelsJob = _backgroundJobs.ContinueJobWith<AmazonS3DownloadJob>(trainingImagesJob, job =>
-        job.Directory(bucketName, trainingLabelsPath, outputDirectory)
+        job.Directory(bucketName, trainingLabelsPath, outputDirectory, null)
       );
 
       var trainimages = Path.Combine(outputDirectory, "train.txt");

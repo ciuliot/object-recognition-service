@@ -13,6 +13,7 @@ using System;
 using Hangfire.Dashboard;
 using Digitalist.ObjectRecognition.Hubs;
 using Digitalist.ObjectRecognition.Jobs;
+using Hangfire.Console;
 
 namespace Digitalist.ObjectRecognition
 {
@@ -31,6 +32,7 @@ namespace Digitalist.ObjectRecognition
       services.AddHangfire(config =>
       {
         config.UseMemoryStorage();
+        config.UseConsole();
       });
       services.AddMvc();
       services.AddSignalR();

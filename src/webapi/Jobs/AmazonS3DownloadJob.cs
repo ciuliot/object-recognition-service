@@ -5,6 +5,9 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Microsoft.Extensions.Logging;
+using Hangfire.Server;
+using Hangfire.Console;
+using Hangfire.Console.Progress;
 
 namespace Digitalist.ObjectRecognition.Jobs
 {
@@ -20,26 +23,35 @@ namespace Digitalist.ObjectRecognition.Jobs
       _amazonS3Client = amazonS3Client;
     }
 
-    public void Directory(string bucketName, string s3Directory, string outputDirectory)
+    public void Directory(string bucketName, string s3Directory, string outputDirectory, PerformContext context)
     {
-      _logger.LogInformation($"Starting directory download {bucketName}/{s3Directory} to {outputDirectory}");
+      context.WriteLine($"Downloading directory {bucketName}/{s3Directory} to {outputDirectory}");
 
       var objects = _amazonS3Client.ListObjectsV2Async(new ListObjectsV2Request
       {
         BucketName = bucketName,
         Prefix = s3Directory
       }).GetAwaiter().GetResult();
+      var i = 0.0;
+
+      var progressBar = context.WriteProgressBar();
 
       var tasks = from obj in objects.S3Objects
-                  select DownloadFile(bucketName, obj.Key, outputDirectory);
+                  select DownloadFile(bucketName, obj.Key, outputDirectory).ContinueWith((t) =>
+                  {
+                    progressBar.SetValue((100.0 * ++i) / (double)objects.KeyCount);
+                  });
 
       Task.WaitAll(tasks.ToArray());
+
+      progressBar.SetValue(100);
 
       _logger.LogInformation($"Directory downloaded {bucketName}/{s3Directory} to {outputDirectory}");
     }
 
-    public void File(string bucketName, string fileName, string outputDirectory)
+    public void File(string bucketName, string fileName, string outputDirectory, PerformContext context)
     {
+      context.WriteLine($"Downloading file {bucketName}/{fileName} to {outputDirectory}/{fileName}");
       _logger.LogInformation($"Downloading file {bucketName}/{fileName} to {outputDirectory}/{fileName}");
       DownloadFile(bucketName, fileName, outputDirectory).GetAwaiter().GetResult();
     }
