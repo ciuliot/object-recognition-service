@@ -14,11 +14,31 @@ using Hangfire.Dashboard;
 using Digitalist.ObjectRecognition.Hubs;
 using Digitalist.ObjectRecognition.Jobs;
 using Hangfire.Console;
+using Digitalist.ObjectRecognition.Console;
+using System.Threading;
+using Hangfire.Server;
 
 namespace Digitalist.ObjectRecognition
 {
+  public class LongRunning
+  {
+    public void Run(PerformContext context, IJobCancellationToken token)
+    {
+      foreach(var pair in context.Items)
+      {
+        System.Console.WriteLine($"{pair.Key} = {pair.Value}");
+      }
+
+      while (!token.ShutdownToken.IsCancellationRequested) { 
+        Thread.Sleep(100);
+      }
+    }
+  }
+
   public class Startup
   {
+
+
     public Startup(IConfiguration configuration)
     {
       Configuration = configuration;
@@ -31,8 +51,11 @@ namespace Digitalist.ObjectRecognition
     {
       services.AddHangfire(config =>
       {
-        config.UseMemoryStorage();
-        config.UseConsole();
+        config.UseMemoryStorage();                
+        config.UseConsole();              
+
+        // Our console needs to be registered last
+        config.UseObjectRecognitionConsole();
       });
       services.AddMvc();
       services.AddSignalR();
@@ -54,7 +77,7 @@ namespace Digitalist.ObjectRecognition
         Configuration["AWS_ACCESS_KEY"],
         Configuration["AWS_SECRET_KEY"],
         config));
- 
+
       services.AddSwaggerGen(c =>
       {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
@@ -83,7 +106,7 @@ namespace Digitalist.ObjectRecognition
         endpoints.MapControllers();
 
         endpoints.MapHub<DarknetJobHub>("/darknetHub");
-      });      
+      });
 
       app.UseSwagger();
 
@@ -94,7 +117,6 @@ namespace Digitalist.ObjectRecognition
       });
 
       app.UseHttpsRedirection();
-      
 
       JobsSidebarMenu.Items.Add(page => new MenuItem("Training details", page.Url.To("/../TrainingJobsPage"))
       {
@@ -104,11 +126,13 @@ namespace Digitalist.ObjectRecognition
 
       app.UseHangfireDashboard("/dashboard", new DashboardOptions
       {
-        Authorization = new [] { new NoAuthorizationFilter() }
+        Authorization = new[] { new NoAuthorizationFilter() }
       });
-      app.UseHangfireServer();      
+      app.UseHangfireServer();
 
-      app.UseStaticFiles();      
+      backgroundJobs.Enqueue<LongRunning>(t => t.Run(null, null));
+
+      app.UseStaticFiles();
     }
   }
 }

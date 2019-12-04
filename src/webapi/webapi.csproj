@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
-  </PropertyGroup>
+    <RootNamespace>Digitalist.ObjectRecognition</RootNamespace>
+  </PropertyGroup>  
 
   <ItemGroup>    
     <PackageReference Include="Hangfire.Console" Version="1.4.2" />    

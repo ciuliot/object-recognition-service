@@ -49,11 +49,11 @@ COPY --from=build-env /home/darknet/libdarknet.so /usr/lib
 COPY --from=build-env /home/glue/libdarknet_glue.so /usr/lib
 COPY --from=build-env /lib/libc.musl-x86_64.so.1 /lib
 
-COPY --from=build-env /home/darknet/cfg/coco.data ./cfg/
-COPY --from=build-env /home/darknet/cfg/yolov3.cfg ./cfg/
-COPY --from=build-env /home/darknet/data/coco.names ./data/
-COPY --from=build-env /home/darknet/data/labels/*.png ./data/labels/
-COPY --from=build-env /home/darknet/data/dog.jpg ./
-COPY --from=build-env /home/yolov3.weights ./
+#COPY --from=build-env /home/darknet/cfg/coco.data ./cfg/
+#COPY --from=build-env /home/darknet/cfg/yolov3.cfg ./cfg/
+#COPY --from=build-env /home/darknet/data/coco.names ./data/
+#COPY --from=build-env /home/darknet/data/labels/*.png ./data/labels/
+#COPY --from=build-env /home/darknet/data/dog.jpg ./
+#COPY --from=build-env /home/yolov3.weights ./
 
 ENTRYPOINT ["dotnet", "/home/webapi.dll", "--environment=Development"]
